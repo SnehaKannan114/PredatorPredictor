@@ -444,6 +444,6 @@ def train_models(df):
         print("Error accessing file", e)
     except Exception as e:
         print(e)
-df = create_dataframe.setup_dataframe()
-train_models(df)
+# df = create_dataframe.setup_dataframe()
+# train_models(df)
 # glove_model(df)
