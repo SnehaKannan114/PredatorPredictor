@@ -25,37 +25,16 @@ import datetime
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 from sklearn import model_selection, preprocessing, linear_model, naive_bayes, metrics, svm
+import create_dataframe
 
-NUMBER_OF_DATASETS=2
-FILEPATH_DICT = {'kaggle':   'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
-
+NUMBER_OF_DATASETS=3
+FILEPATH_DICT = {'kaggle': 'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
+#, 'crowdsourced': 'data/model_input_data/crowd_sourced_processed.csv'
 
 from sklearn.linear_model import LogisticRegression
 
 now = datetime.datetime.now()
 print('[',str(now),']', 'Starting demo')
-
-
-
-def setup_dataframe():
-	df_list = []
-	source = "kaggle"
-	filepath = FILEPATH_DICT["kaggle"]
-	#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-	df = pd.read_csv(filepath, names=['label', 'date','tweet'], sep=',',header=0)
-	df['source'] = source  # Add another column filled with the source name
-	df_list.append(df)
-	df = pd.concat(df_list)
-	df = df.drop(['date'], axis=1)
-	source = "dataworld"
-	filepath = FILEPATH_DICT["dataworld"]
-	#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-	df = pd.read_csv(filepath, names=['id', 'count','hate_speech', 'offensive_language','neither','class', 'tweet', 'label'], sep=',',header=0)
-	df['source'] = source  # Add another column filled with the source name
-	df_list.append(df)
-	df = pd.concat(df_list)
-	df = df.drop(['count','hate_speech', 'offensive_language','neither'], axis=1)
-	return df
 
 def read_accuracies():
 	model_fscore = None
@@ -95,15 +74,9 @@ def classify_tweet(df, list_of_tweets, dataset_weights, normalization=1):
 	offensive_score = [0]*len(list_of_tweets)
 	try:
 		for source in df['source'].unique():
-		    if source == "kaggle":
-		        df_source = df[df['source'] == source]
-		        sentences = df_source['tweet'].values
-		        y = df_source['label'].values
-		    elif source == "dataworld":
-		        df_source = df[df['source'] == source]
-		        sentences = df_source['tweet'].values
-		        y = df_source['class'].values
-		        # print(y)
+		    df_source = df[df['source'] == source]
+		    sentences = df_source['tweet'].values
+		    y = df_source['label'].values
 		    now = datetime.datetime.now()
 		    print('[',str(now),']', 'Processing started for source', source)
 		    print("----------------------------------------------------------------")
@@ -198,15 +171,16 @@ def classify_tweet(df, list_of_tweets, dataset_weights, normalization=1):
 				offensive_score[i] = offensive_score[i]/(3*NUMBER_OF_DATASETS)
 			else:
 				offensive_score[i] = offensive_score[i]/3
+		print(offensive_score)
 	except FileNotFoundError as e:
 		print("Error accessing file", e)
 	except Exception as e:
 		print(e)
 	return( float(offensive_score[0]))
-#input_query_list = ['shut up bitch', 'i love my mom', 'hi honey', 'you are a hoe', 'damn mama smack that']
-# input_query_list = ['you are a stupid moron you disgusting hag']
+# input_query_list = ['shut up bitch', 'i love my mom', 'hi honey', 'you are a hoe', 'damn mama smack that']
+# # input_query_list = ['you are a stupid moron you disgusting hag']
 
 # dataset_weights = normalize_dataset()
-# df = setup_dataframe()
+# df = create_dataframe.setup_dataframe()
 # classify_tweet(df, input_query_list, dataset_weights, normalization=1)
 

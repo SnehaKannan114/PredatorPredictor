@@ -39,8 +39,6 @@ from nltk.stem import SnowballStemmer
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
-import create_dataframe
-
 #usage: tfidf(df_source, sentences_train, sentences_test) 
 def tfidf(trainDF, train_x, valid_x):
     # word level tf-idf
@@ -171,7 +169,6 @@ def glove_model(df):
 
     return accuracy
 
-from sklearn.feature_extraction.text import CountVectorizer
 FILEPATH_DICT = {'kaggle': 'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv', 'crowdsourced': 'data/model_input_data/crowd_sourced_processed.csv'}
 
 '''
@@ -229,8 +226,8 @@ print("Accuracy:", score)
 
 from sklearn.linear_model import LogisticRegression
 
-OPTIMAL_EPOCH = {"kaggle": 4, "dataworld": 5}
-OPTIMAL_EPOCH_MAX_POOL = {"kaggle": 3, "dataworld": 8}
+OPTIMAL_EPOCH = {"kaggle": 4, "dataworld": 5, "crowdsourced": 3}
+OPTIMAL_EPOCH_MAX_POOL = {"kaggle": 3, "dataworld": 8, "crowdsourced": 5}
 
 
 
@@ -238,12 +235,13 @@ def train_models(df):
     try:
         now = datetime.datetime.now()
         print('[',str(now),']', 'Starting Training')
-        #accuracy_store_file = open("./res/accuracy.txt", "w+")
+        accuracy_store_file = open("./res/accuracy.txt", "w+")
         for source in df['source'].unique():
             df_source = df[df['source'] == source]
             sentences = df_source['tweet'].values
             y = df_source['label'].values
-             
+            if (source == "dataworld" or source == "kaggle"):
+                continue 
             now = datetime.datetime.now()
             print('[',str(now),']', 'Processing started for source', source)
             print("----------------------------------------------------------------")
@@ -256,7 +254,8 @@ def train_models(df):
             print("Training data is of size", len(sentences_train))
             print("Testing data is of size", len(sentences_test))
             print("----------------------------------------------------------------")
-
+            # print(y)
+            # print(sentences_train)
             #vectorising our data
 
 
@@ -276,14 +275,14 @@ def train_models(df):
             #Logistic Regression
             
             lr_classifier, accuracy = logistic_regression_modeller(X_train, y_train, X_test, y_test, source)
-            #accuracy_store_file.write('lr_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('lr_' + source + '_accuracy:' + str(accuracy) + '\n')
             print("Accuracy metrics saved to file")
             
             #Preparing a baseline model for comparison
             #Naive Bayes
 
             nb_classifier, accuracy = naive_bayes_modeller(X_train, y_train, X_test, y_test, source)
-            #accuracy_store_file.write('nb_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('nb_' + source + '_accuracy:' + str(accuracy) + '\n')
             print("Accuracy metrics saved to file")
 
             
@@ -316,11 +315,11 @@ def train_models(df):
             now = datetime.datetime.now()
             print('[',str(now),']', 'CNN training completed for source', source)
             filename = './model/cnn_bow_' + source + '.h5'
-            #model.save(filename)
+            model.save(filename)
             print("Saved model to disk")
-            #accuracy_store_file.write('cnn_bow_' + source + '_accuracy:' + str(accuracy) + '\n')
-            #accuracy_store_file.write('cnn_bow_' + source + '_precision:' + str(precision) + '\n')
-            #accuracy_store_file.write('cnn_bow_' + source + '_recall:' + str(recall) + '\n')
+            accuracy_store_file.write('cnn_bow_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_bow_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_bow_' + source + '_recall:' + str(recall) + '\n')
             print("Accuracy metrics saved to file")
             # y = model.predict(input_query)
             # print("Output")
@@ -330,7 +329,7 @@ def train_models(df):
             
             plot_history(history)
             backend.clear_session()
-
+            
             #CNN with word embedding
 
             tokenizer = Tokenizer(num_words=5000)
@@ -386,11 +385,11 @@ def train_models(df):
             now = datetime.datetime.now()
             print('[',str(now),']', 'CNN training completed for source', source)
             filename = './model/cnn_we_' + source + '.h5'
-            #model.save(filename)
+            model.save(filename)
             print("Saved model to disk")
-            #accuracy_store_file.write('cnn_we_' + source + '_accuracy:' + str(accuracy) + '\n')
-            #accuracy_store_file.write('cnn_we_' + source + '_precision:' + str(precision) + '\n')
-            #accuracy_store_file.write('cnn_we_' + source + '_recall:' + str(recall) + '\n')
+            accuracy_store_file.write('cnn_we_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_we_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_we_' + source + '_recall:' + str(recall) + '\n')
             print("Accuracy metrics saved to file")
             plot_history(history)
             # predicted = model.predict(X_test)
@@ -399,6 +398,7 @@ def train_models(df):
             backend.clear_session()
             
             #with GlobalMaxPooling1D layer to reduce number of features
+            '''
             embedding_dim = 50
 
             model = Sequential()
@@ -431,19 +431,20 @@ def train_models(df):
             now = datetime.datetime.now()
             print('[',str(now),']', 'Training completed for source', source)
             filename = './model/cnn_we_pooling_' + source + '.h5'
-            #model.save(filename)
+            model.save(filename)
             print("Saved model to disk")
-            #accuracy_store_file.write('cnn_we_pooling_' + source + '_accuracy:' + str(accuracy) + '\n')
-            #accuracy_store_file.write('cnn_we_pooling_' + source + '_precision:' + str(precision) + '\n')
-            #accuracy_store_file.write('cnn_we_pooling_' + source + '_recall:' + str(recall) + '\n')
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_recall:' + str(recall) + '\n')
             print("Accuracy metrics saved to file")
             plot_history(history)
             backend.clear_session()
-            
+            '''
+
     except FileNotFoundError as e:
         print("Error accessing file", e)
     except Exception as e:
         print(e)
-df = create_dataframe.setup_dataframe()
+df = setup_dataframe()
 train_models(df)
-# glove_model(df)
+#glove_model(df)
