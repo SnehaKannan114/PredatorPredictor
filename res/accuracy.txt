@@ -1,0 +1,3 @@
+cnn_we_pooling_dataworld_accuracy:0.9488379599741769
+cnn_we_pooling_dataworld_precision:0.9693025063143579
+cnn_we_pooling_dataworld_recall:0.9691142191142191

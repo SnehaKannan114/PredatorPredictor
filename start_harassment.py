@@ -103,12 +103,12 @@ def plot_history(history):
     plt.show()
 
 
-filepath_dict = {'kaggle':   'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
+FILEPATH_DICT = {'kaggle': 'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
 
 df_list = []
 
 source = "kaggle"
-filepath = filepath_dict["kaggle"]
+filepath = FILEPATH_DICT["kaggle"]
 #df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
 df = pd.read_csv(filepath, names=['label', 'date','tweet'], sep=',',header=0)
 df['source'] = source  # Add another column filled with the source name
@@ -117,7 +117,7 @@ df = pd.concat(df_list)
 df = df.drop(['date'], axis=1)
 
 source = "dataworld"
-filepath = filepath_dict["dataworld"]
+filepath = FILEPATH_DICT["dataworld"]
 #df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
 df = pd.read_csv(filepath, names=['id', 'count','hate_speech', 'offensive_language','neither','class', 'tweet', 'label'], sep=',',header=0)
 df['source'] = source  # Add another column filled with the source name
@@ -181,216 +181,228 @@ print("Accuracy:", score)
 
 from sklearn.linear_model import LogisticRegression
 
-optimal_epoch = {"kaggle": 4, "dataworld": 5}
-optimal_epoch_max_pool = {"kaggle": 3, "dataworld": 8}
+OPTIMAL_EPOCH = {"kaggle": 4, "dataworld": 5}
+OPTIMAL_EPOCH_MAX_POOL = {"kaggle": 3, "dataworld": 8}
 
 now = datetime.datetime.now()
 print('[',str(now),']', 'Starting demo')
 
 
 def train_models():
-    accuracy_store_file = open("./res/accuracy.txt", "w+")
-    for source in df['source'].unique():
-        if source == "kaggle":
-            continue
-            df_source = df[df['source'] == source]
-            sentences = df_source['tweet'].values
-            y = df_source['label'].values
-        elif source == "dataworld":
-            df_source = df[df['source'] == source]
-            sentences = df_source['tweet'].values
-            # print(sentences)
-            y = df_source['label'].values
+    try:
+        accuracy_store_file = open("./res/accuracy.txt", "w+")
+        for source in df['source'].unique():
+            if source == "kaggle":
+                continue
+                df_source = df[df['source'] == source]
+                sentences = df_source['tweet'].values
+                y = df_source['label'].values
+            elif source == "dataworld":
+                df_source = df[df['source'] == source]
+                sentences = df_source['tweet'].values
+                # print(sentences)
+                y = df_source['label'].values
+                # print(y)
+             
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'Processing started for source', source)
+            print("----------------------------------------------------------------")
+            print("----------------------------------------------------------------")
+            print(source.upper(), "SOURCE")
+            #splitting dataset into training and validation data
+            sentences_train, sentences_test, y_train, y_test = train_test_split(
+                sentences, y, test_size=0.25, random_state=1000)
+            print("----------------------------------------------------------------")
+            print("Training data is of size", len(sentences_train))
+            print("Testing data is of size", len(sentences_test))
+            print("----------------------------------------------------------------")
+
+            #vectorising our data
+
+
+            #CountVectorizer performs tokenization which separates the sentences into a set of tokens
+            #It additionally removes punctuation and special characters and can apply other preprocessing to each word
+            '''
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'Vectorization started for source', source)
+            
+            vectorizer = CountVectorizer()
+            vectorizer.fit(sentences_train)
+            X_train = vectorizer.transform(sentences_train)
+            X_test  = vectorizer.transform(sentences_test)
+        
+            
+            #Preparing a baseline model for comparison
+            #Logistic Regression
+            
+            lr_classifier, accuracy = logistic_regression_modeller(X_train, y_train, X_test, y_test, source)
+            accuracy_store_file.write('lr_' + source + '_accuracy:' + str(accuracy) + '\n')
+            print("Accuracy metrics saved to file")
+            
+            #Preparing a baseline model for comparison
+            #Naive Bayes
+
+            nb_classifier, accuracy = naive_bayes_modeller(X_train, y_train, X_test, y_test, source)
+            accuracy_store_file.write('nb_' + source + '_accuracy:' + str(accuracy) + '\n')
+            print("Accuracy metrics saved to file")
+
+            
+            
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'CNN training started for source', source)
+            print("\nUsing Deep Neural Networks without word embedding")
+            
+            input_dim = X_train.shape[1]  # Number of features
+
+            model = Sequential()
+            model.add(layers.Dense(10, input_dim=input_dim, activation='relu'))
+            model.add(layers.Dense(1, activation='sigmoid'))
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+            model.summary()
+            print("Fitting model now. It may take a while...")
+            history = model.fit(X_train, y_train,epochs=OPTIMAL_EPOCH[source],verbose=False,validation_data=(X_test, y_test),batch_size=10)
+            loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
+            print("----------------------------------------------------------------")
+            print("Training Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
+            loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
+            print("Testing Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
+            yhat_classes = model.predict_classes(X_test, verbose=0)
+            yhat_classes = yhat_classes[:, 0]
+            precision = precision_score(y_test, yhat_classes)
+            recall = recall_score(y_test, yhat_classes)
+            print("Testing Precision for {} data: {:.4f} using CNN".format(source, precision))
+            print("Testing Recall for {} data: {:.4f} using CNN".format(source, recall))
+            print("----------------------------------------------------------------")
+            print("----------------------------------------------------------------")
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'CNN training completed for source', source)
+            filename = './model/cnn_bow_' + source + '.h5'
+            model.save(filename)
+            print("Saved model to disk")
+            accuracy_store_file.write('cnn_bow_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_bow_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_bow_' + source + '_recall:' + str(recall) + '\n')
+            print("Accuracy metrics saved to file")
+            # y = model.predict(input_query)
+            # print("Output")
             # print(y)
-         
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'Processing started for source', source)
-        print("----------------------------------------------------------------")
-        print("----------------------------------------------------------------")
-        print(source.upper(), "SOURCE")
-        #splitting dataset into training and validation data
-        sentences_train, sentences_test, y_train, y_test = train_test_split(
-            sentences, y, test_size=0.25, random_state=1000)
-        print("----------------------------------------------------------------")
-        print("Training data is of size", len(sentences_train))
-        print("Testing data is of size", len(sentences_test))
-        print("----------------------------------------------------------------")
+            
+            #A good way to see when the model starts overfitting is when the loss of the validation data starts rising again. This tends to be a good point to stop the model. 
+            
+            plot_history(history)
+            backend.clear_session()
+            #CNN with word embedding
+            '''
+            tokenizer = Tokenizer(num_words=5000)
+            tokenizer.fit_on_texts(sentences_train)
 
-        #vectorising our data
+            X_train = tokenizer.texts_to_sequences(sentences_train)
+            X_test = tokenizer.texts_to_sequences(sentences_test)
+            vocab_size = len(tokenizer.word_index) + 1  # Adding 1 because of reserved 0 index
+            print("Word embedding example weightage")
+            print(sentences_train[4])
+            print(X_train[4])
+            print('\n')
+            print(sentences_train[53])
+            print(X_train[53])
+            print('\n')
+            print(sentences_train[10])
+            print(X_train[10])
+            
+            #for word in ['the', 'all', 'happy', 'sad']: print('{}: {}'.format(word, tokenizer.word_index[word]))
 
+            maxlen = 100
 
-        #CountVectorizer performs tokenization which separates the sentences into a set of tokens
-        #It additionally removes punctuation and special characters and can apply other preprocessing to each word
-        
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'Vectorization started for source', source)
-        
-        vectorizer = CountVectorizer()
-        vectorizer.fit(sentences_train)
-        X_train = vectorizer.transform(sentences_train)
-        X_test  = vectorizer.transform(sentences_test)
-    
-        
-        #Preparing a baseline model for comparison
-        #Logistic Regression
-        
-        lr_classifier, accuracy = logistic_regression_modeller(X_train, y_train, X_test, y_test, source)
-        accuracy_store_file.write('lr_' + source + '_accuracy:' + str(accuracy) + '\n')
-        print("Accuracy metrics saved to file")
-        
-        #Preparing a baseline model for comparison
-        #Naive Bayes
+            X_train = pad_sequences(X_train, padding='post', maxlen=maxlen)
+            X_test = pad_sequences(X_test, padding='post', maxlen=maxlen)
+            
+            '''
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'CNN training with word embedding started for source', source)
+            print("\nUsing Deep Neural Networks with word embedding")
+            
+            embedding_dim = 50
+            model = Sequential()
+            model.add(layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=maxlen))
+            model.add(layers.Flatten())
+            model.add(layers.Dense(10, activation='relu'))
+            model.add(layers.Dense(1, activation='sigmoid'))
+            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            model.summary()
+            print("Fitting model now. It may take a while...")
+            history = model.fit(X_train, y_train, epochs=5, verbose=False, validation_data=(X_test, y_test), batch_size=10)
+            loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
+            print("----------------------------------------------------------------")
+            print("Training Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
+            loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
+            print("Testing Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
+            yhat_classes = model.predict_classes(X_test, verbose=0)
+            yhat_classes = yhat_classes[:, 0]
+            precision = precision_score(y_test, yhat_classes)
+            recall = recall_score(y_test, yhat_classes)
+            print("Testing Precision for {} data: {:.4f} using CNN".format(source, precision))
+            print("Testing Recall for {} data: {:.4f} using CNN".format(source, recall))
+            print("----------------------------------------------------------------")
+            print("----------------------------------------------------------------")
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'CNN training completed for source', source)
+            filename = './model/cnn_we_' + source + '.h5'
+            model.save(filename)
+            print("Saved model to disk")
+            accuracy_store_file.write('cnn_we_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_we_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_we_' + source + '_recall:' + str(recall) + '\n')
+            print("Accuracy metrics saved to file")
+            plot_history(history)
+            # predicted = model.predict(X_test)
+            # predicted = np.argmax(predicted, axis=1)
+            # print(accuracy_score(y_test, predicted))
+            backend.clear_session()
+            
+            #with GlobalMaxPooling1D layer to reduce number of features
+            '''
+            embedding_dim = 50
 
-        nb_classifier, accuracy = naive_bayes_modeller(X_train, y_train, X_test, y_test, source)
-        accuracy_store_file.write('nb_' + source + '_accuracy:' + str(accuracy) + '\n')
-        print("Accuracy metrics saved to file")
-
-        
-        
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'CNN training started for source', source)
-        print("\nUsing Deep Neural Networks without word embedding")
-        
-        input_dim = X_train.shape[1]  # Number of features
-
-        model = Sequential()
-        model.add(layers.Dense(10, input_dim=input_dim, activation='relu'))
-        model.add(layers.Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        model.summary()
-        print("Fitting model now. It may take a while...")
-        history = model.fit(X_train, y_train,epochs=optimal_epoch[source],verbose=False,validation_data=(X_test, y_test),batch_size=10)
-        loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
-        print("----------------------------------------------------------------")
-        print("Training Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
-        loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
-        print("Testing Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
-        yhat_classes = model.predict_classes(X_test, verbose=0)
-        yhat_classes = yhat_classes[:, 0]
-        precision = precision_score(y_test, yhat_classes)
-        recall = recall_score(y_test, yhat_classes)
-        print("Testing Precision for {} data: {:.4f} using CNN".format(source, precision))
-        print("Testing Recall for {} data: {:.4f} using CNN".format(source, recall))
-        print("----------------------------------------------------------------")
-        print("----------------------------------------------------------------")
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'CNN training completed for source', source)
-        filename = './model/cnn_bow_' + source + '.h5'
-        model.save(filename)
-        print("Saved model to disk")
-        accuracy_store_file.write('cnn_bow_' + source + '_accuracy:' + str(accuracy) + '\n')
-        accuracy_store_file.write('cnn_bow_' + source + '_precision:' + str(precision) + '\n')
-        accuracy_store_file.write('cnn_bow_' + source + '_recall:' + str(recall) + '\n')
-        print("Accuracy metrics saved to file")
-        # y = model.predict(input_query)
-        # print("Output")
-        # print(y)
-        
-        #A good way to see when the model starts overfitting is when the loss of the validation data starts rising again. This tends to be a good point to stop the model. 
-        
-        plot_history(history)
-        backend.clear_session()
-        #CNN with word embedding
-        
-        tokenizer = Tokenizer(num_words=5000)
-        tokenizer.fit_on_texts(sentences_train)
-
-        X_train = tokenizer.texts_to_sequences(sentences_train)
-        X_test = tokenizer.texts_to_sequences(sentences_test)
-        vocab_size = len(tokenizer.word_index) + 1  # Adding 1 because of reserved 0 index
-        print("Word embedding example weightage")
-        print(sentences_train[4])
-        print(X_train[4])
-        print('\n')
-        print(sentences_train[53])
-        print(X_train[53])
-        print('\n')
-        print(sentences_train[10])
-        print(X_train[10])
-        
-        #for word in ['the', 'all', 'happy', 'sad']: print('{}: {}'.format(word, tokenizer.word_index[word]))
-
-        maxlen = 100
-
-        X_train = pad_sequences(X_train, padding='post', maxlen=maxlen)
-        X_test = pad_sequences(X_test, padding='post', maxlen=maxlen)
-        
-        
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'CNN training with word embedding started for source', source)
-        print("\nUsing Deep Neural Networks with word embedding")
-        
-        embedding_dim = 50
-        model = Sequential()
-        model.add(layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=maxlen))
-        model.add(layers.Flatten())
-        model.add(layers.Dense(10, activation='relu'))
-        model.add(layers.Dense(1, activation='sigmoid'))
-        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        model.summary()
-        print("Fitting model now. It may take a while...")
-        history = model.fit(X_train, y_train, epochs=5, verbose=False, validation_data=(X_test, y_test), batch_size=10)
-        loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
-        print("----------------------------------------------------------------")
-        print("Training Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
-        loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
-        print("Testing Accuracy for {} data: {:.4f} using CNN".format(source, accuracy))
-        yhat_classes = model.predict_classes(X_test, verbose=0)
-        yhat_classes = yhat_classes[:, 0]
-        precision = precision_score(y_test, yhat_classes)
-        recall = recall_score(y_test, yhat_classes)
-        print("Testing Precision for {} data: {:.4f} using CNN".format(source, precision))
-        print("Testing Recall for {} data: {:.4f} using CNN".format(source, recall))
-        print("----------------------------------------------------------------")
-        print("----------------------------------------------------------------")
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'CNN training completed for source', source)
-        filename = './model/cnn_we_' + source + '.h5'
-        model.save(filename)
-        print("Saved model to disk")
-        accuracy_store_file.write('cnn_we_' + source + '_accuracy:' + str(accuracy) + '\n')
-        accuracy_store_file.write('cnn_we_' + source + '_precision:' + str(precision) + '\n')
-        accuracy_store_file.write('cnn_we_' + source + '_recall:' + str(recall) + '\n')
-        print("Accuracy metrics saved to file")
-        plot_history(history)
-        # predicted = model.predict(X_test)
-        # predicted = np.argmax(predicted, axis=1)
-        # print(accuracy_score(y_test, predicted))
-        backend.clear_session()
-        
-        #with GlobalMaxPooling1D layer to reduce number of features
-        '''
-        embedding_dim = 50
-
-        model = Sequential()
-        model.add(layers.Embedding(input_dim=vocab_size, 
-                                   output_dim=embedding_dim, 
-                                   input_length=maxlen))
-        model.add(layers.GlobalMaxPool1D())
-        model.add(layers.Dense(10, activation='relu'))
-        model.add(layers.Dense(1, activation='sigmoid'))
-        model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
-        model.summary()
-        print("Fitting model now. It may take a while...")
-        history = model.fit(X_train, y_train,
-                        epochs=optimal_epoch_max_pool[source],
-                        verbose=False,
-                        validation_data=(X_test, y_test),
-                        batch_size=10)
-        loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
-        print("Training Accuracy: {:.4f}".format(accuracy))
-        loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
-        print("Testing Accuracy:  {:.4f}".format(accuracy))
-        now = datetime.datetime.now()
-        print('[',str(now),']', 'Training completed for source', source)
-        filename = './model/cnn_we_pooling_' + source + '.h5'
-        model.save(filename)
-        print("Saved model to disk")
-        accuracy_store_file.write('cnn_we_pooling_' + source + '_accuracy:' + str(accuracy) + '\n')
-        print("Accuracy metrics saved to file")
-        plot_history(history)
-        backend.clear_session()
-        '''
+            model = Sequential()
+            model.add(layers.Embedding(input_dim=vocab_size, 
+                                       output_dim=embedding_dim, 
+                                       input_length=maxlen))
+            model.add(layers.GlobalMaxPool1D())
+            model.add(layers.Dense(10, activation='relu'))
+            model.add(layers.Dense(1, activation='sigmoid'))
+            model.compile(optimizer='adam',
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+            model.summary()
+            print("Fitting model now. It may take a while...")
+            history = model.fit(X_train, y_train,
+                            epochs=OPTIMAL_EPOCH_MAX_POOL[source],
+                            verbose=False,
+                            validation_data=(X_test, y_test),
+                            batch_size=10)
+            loss, accuracy = model.evaluate(X_train, y_train, verbose=False)
+            print("Training Accuracy: {:.4f}".format(accuracy))
+            loss, accuracy = model.evaluate(X_test, y_test, verbose=False)
+            print("Testing Accuracy:  {:.4f}".format(accuracy))
+            yhat_classes = model.predict_classes(X_test, verbose=0)
+            yhat_classes = yhat_classes[:, 0]
+            precision = precision_score(y_test, yhat_classes)
+            recall = recall_score(y_test, yhat_classes)
+            print("Testing Precision for {} data: {:.4f} using CNN".format(source, precision))
+            print("Testing Recall for {} data: {:.4f} using CNN".format(source, recall))
+            now = datetime.datetime.now()
+            print('[',str(now),']', 'Training completed for source', source)
+            filename = './model/cnn_we_pooling_' + source + '.h5'
+            model.save(filename)
+            print("Saved model to disk")
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_accuracy:' + str(accuracy) + '\n')
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_precision:' + str(precision) + '\n')
+            accuracy_store_file.write('cnn_we_pooling_' + source + '_recall:' + str(recall) + '\n')
+            print("Accuracy metrics saved to file")
+            plot_history(history)
+            backend.clear_session()
+    except FileNotFoundError as e:
+        print("Error accessing file", e)
+    except Exception as e:
+        print(e)
 train_models()

@@ -5,29 +5,6 @@ import html
 import dataDecoder
 import itertools
 
-
-filepath_dict = {'kaggle':   'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
-
-def setup_dataframe():
-	df_list = []
-	source = "kaggle"
-	filepath = filepath_dict["kaggle"]
-	#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-	df = pd.read_csv(filepath, names=['label', 'date','tweet'], sep=',',header=0)
-	df['source'] = source  # Add another column filled with the source name
-	df_list.append(df)
-	df = pd.concat(df_list)
-	df = df.drop(['date'], axis=1)
-	source = "dataworld"
-	filepath = filepath_dict["dataworld"]
-	#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-	df = pd.read_csv(filepath, names=['id', 'count','hate_speech', 'offensive_language','neither','class', 'tweet', 'label'], sep=',',header=0)
-	df['source'] = source  # Add another column filled with the source name
-	df_list.append(df)
-	df = pd.concat(df_list)
-	df = df.drop(['count','hate_speech', 'offensive_language','neither'], axis=1)
-	return df
-
 def load_slang():
 	slang_store_file = open("./res/slang.txt", "r")
 	slang_dictionary = {}
@@ -39,7 +16,6 @@ def load_slang():
 
 def cleanup(text):
 	apostrophe = {"re": "are", "nt": "not", "s": "is", 'd': 'would', 'll': 'will', 've': 'have'}
-	processed_file = open("./res/processes_tweets.txt", "w+")
 	print("Original Tweet")
 	print(text)
 	print("\n")
@@ -104,5 +80,7 @@ def cleanup(text):
 	return text
 
 # df = setup_dataframe()
-# cleanup(df)
+# try:
+# 	cleanup("Hello")
+
 # load_slang()
