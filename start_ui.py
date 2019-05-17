@@ -1,3 +1,4 @@
+import kivy
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -9,6 +10,11 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
+
+import create_dataframe
+import prediction
+import accuracy_store
+import start_harassment
 
 Builder.load_string("""
 <Button>:
@@ -162,11 +168,23 @@ class SecondWindow(Screen):
     def process_command(self):
         # Text string from the user text input 
         user_input = self.ids.fetch_raw_tweet.text
-        
+
+        print(type(user_input))
+        df = create_dataframe.setup_dataframe()
+        dataset_weights = prediction.normalize_dataset()
+        score = prediction.classify_tweet(df, [user_input], dataset_weights, normalization=1)
+        print(score)
+        classification = ""
+        if score>0.5:
+            classification = "very harassing"
+        elif score>0:
+            classification = "slightly harassing"
+        else:
+            classification = "not harassing"
         #call function to classify tweet here.
           
         # Displaying the output -> right now i'm just displaying the same tweet again
-        self.ids.processed_tweet.text = 'The tweet: ' + user_input +' is classified as .... by the system'  
+        self.ids.processed_tweet.text = 'The tweet: ' + user_input +' is classified as ' + classification.upper() + ' by the system'
         #clearing user input in first input box
         self.ids.fetch_raw_tweet.text = ''
 #=============================================================================
@@ -217,22 +235,27 @@ class FourthWindow(Screen):
 
 class FifthWindow(Screen):
     def display_accuracy(self):
-    #display the accuracy in the textbox using the id: accuracy_disp
-    #right now i'm just printing  some text
-        self.ids.accuracy_disp.text = 'Sneha is a dumbass'
+        #display the accuracy in the textbox using the id: accuracy_disp
+        #right now i'm just printing  some text
+        accuracy_dictionary = accuracy_store.read_accuracies()
+        accuracy_text = str(accuracy_dictionary)
+        self.ids.accuracy_disp.text = accuracy_text
 
 class PopUpClass(FloatLayout):
     pass
 
 def show_popup():
     show = PopUpClass()
-    popupWindow = Popup(title="Popup Window", content=show, size_hint=(None,None),size=(400,400))
+    popupWindow = Popup(title="Popup Window", content=show, size_hint=(None,None),size=(800,400))
     popupWindow.open()
     
 def retrain_model():
 #add code to retrain model here
-    #print statement for testing
-    print('retraining model')    
+    print('Retraining model. This might take a while')
+    df = create_dataframe.setup_dataframe()
+    start_harassment.train_models(df)
+    print("Training Completed")
+
 
 # Screen manager
 sm = ScreenManager()

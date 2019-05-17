@@ -29,6 +29,14 @@ from sklearn import model_selection, preprocessing, linear_model, naive_bayes, m
 NUMBER_OF_DATASETS=2
 FILEPATH_DICT = {'kaggle':   'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
 
+
+from sklearn.linear_model import LogisticRegression
+
+now = datetime.datetime.now()
+print('[',str(now),']', 'Starting demo')
+
+
+
 def setup_dataframe():
 	df_list = []
 	source = "kaggle"
@@ -48,11 +56,6 @@ def setup_dataframe():
 	df = pd.concat(df_list)
 	df = df.drop(['count','hate_speech', 'offensive_language','neither'], axis=1)
 	return df
-
-from sklearn.linear_model import LogisticRegression
-
-now = datetime.datetime.now()
-print('[',str(now),']', 'Starting demo')
 
 def read_accuracies():
 	model_fscore = None
@@ -186,6 +189,7 @@ def classify_tweet(df, list_of_tweets, dataset_weights, normalization=1):
 		    		offensive_score[cnt] = offensive_score[cnt] - (1 - (1 - dataset_weights[source][2])*normalization)
 		    	if float_equiv > 0.75:
 		    		offensive_score[cnt] = offensive_score[cnt] + (1 - (1 - dataset_weights[source][2])*normalization)
+		    	print(offensive_score[cnt])
 		    	cnt = cnt+1
 		    print(loaded_model.predict(input_query))
 		    backend.clear_session()
@@ -198,10 +202,11 @@ def classify_tweet(df, list_of_tweets, dataset_weights, normalization=1):
 		print("Error accessing file", e)
 	except Exception as e:
 		print(e)
-	print(offensive_score)
+	return( float(offensive_score[0]))
+#input_query_list = ['shut up bitch', 'i love my mom', 'hi honey', 'you are a hoe', 'damn mama smack that']
+# input_query_list = ['you are a stupid moron you disgusting hag']
 
-input_query_list = ['shut up bitch', 'i love my mom', 'hi honey', 'you are a hoe', 'damn mama smack that']
-dataset_weights = normalize_dataset()
-df = setup_dataframe()
-classify_tweet(df, input_query_list, dataset_weights, normalization=1)
+# dataset_weights = normalize_dataset()
+# df = setup_dataframe()
+# classify_tweet(df, input_query_list, dataset_weights, normalization=1)
 

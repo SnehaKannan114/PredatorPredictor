@@ -21,8 +21,8 @@ cnn_we_pooling_dataworld_accuracy: 0.9480309876955425
 cnn_we_pooling_dataworld_precision: 0.9678169833268708
 cnn_we_pooling_dataworld_recall: 0.9696969696969697
 cnn_bow_kaggle_fscore: 0.6813186813186813
-cnn_we_kaggle_fscore: 0.6419753086419753
-cnn_we_pooling_kaggle_fscore: 0.6521181001283697
+cnn_we_kaggle_fscore: 0.5419753086419753
+cnn_we_pooling_kaggle_fscore: 0.5521181001283697
 cnn_bow_dataworld_fscore: 0.9687740940632229
 cnn_we_dataworld_fscore: 0.968847352024922
 cnn_we_pooling_dataworld_fscore: 0.9687560644284883

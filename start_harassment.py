@@ -105,26 +105,25 @@ def plot_history(history):
 
 FILEPATH_DICT = {'kaggle': 'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
 
-df_list = []
-
-source = "kaggle"
-filepath = FILEPATH_DICT["kaggle"]
-#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-df = pd.read_csv(filepath, names=['label', 'date','tweet'], sep=',',header=0)
-df['source'] = source  # Add another column filled with the source name
-df_list.append(df)
-df = pd.concat(df_list)
-df = df.drop(['date'], axis=1)
-
-source = "dataworld"
-filepath = FILEPATH_DICT["dataworld"]
-#df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
-df = pd.read_csv(filepath, names=['id', 'count','hate_speech', 'offensive_language','neither','class', 'tweet', 'label'], sep=',',header=0)
-df['source'] = source  # Add another column filled with the source name
-df_list.append(df)
-df = pd.concat(df_list)
-
-df = df.drop(['count','hate_speech', 'offensive_language','neither'], axis=1)
+def setup_dataframe():
+    df_list = []
+    source = "kaggle"
+    filepath = FILEPATH_DICT["kaggle"]
+    #df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
+    df = pd.read_csv(filepath, names=['label', 'date','tweet'], sep=',',header=0)
+    df['source'] = source  # Add another column filled with the source name
+    df_list.append(df)
+    df = pd.concat(df_list)
+    df = df.drop(['date'], axis=1)
+    source = "dataworld"
+    filepath = FILEPATH_DICT["dataworld"]
+    #df = pd.read_csv(filepath, names=['rev_id', 'comment year','logged_in',   'ns',  'sample',  'split'], sep='\t')
+    df = pd.read_csv(filepath, names=['id', 'count','hate_speech', 'offensive_language','neither','class', 'tweet', 'label'], sep=',',header=0)
+    df['source'] = source  # Add another column filled with the source name
+    df_list.append(df)
+    df = pd.concat(df_list)
+    df = df.drop(['count','hate_speech', 'offensive_language','neither'], axis=1)
+    return df
 
 '''
 print(df.iloc[1])
@@ -184,16 +183,15 @@ from sklearn.linear_model import LogisticRegression
 OPTIMAL_EPOCH = {"kaggle": 4, "dataworld": 5}
 OPTIMAL_EPOCH_MAX_POOL = {"kaggle": 3, "dataworld": 8}
 
-now = datetime.datetime.now()
-print('[',str(now),']', 'Starting demo')
 
 
-def train_models():
+def train_models(df):
     try:
+        now = datetime.datetime.now()
+        print('[',str(now),']', 'Starting Training')
         accuracy_store_file = open("./res/accuracy.txt", "w+")
         for source in df['source'].unique():
             if source == "kaggle":
-                continue
                 df_source = df[df['source'] == source]
                 sentences = df_source['tweet'].values
                 y = df_source['label'].values
@@ -217,12 +215,14 @@ def train_models():
             print("Testing data is of size", len(sentences_test))
             print("----------------------------------------------------------------")
 
+
+            '''
             #vectorising our data
 
 
             #CountVectorizer performs tokenization which separates the sentences into a set of tokens
             #It additionally removes punctuation and special characters and can apply other preprocessing to each word
-            '''
+            
             now = datetime.datetime.now()
             print('[',str(now),']', 'Vectorization started for source', source)
             
@@ -246,7 +246,6 @@ def train_models():
             accuracy_store_file.write('nb_' + source + '_accuracy:' + str(accuracy) + '\n')
             print("Accuracy metrics saved to file")
 
-            
             
             now = datetime.datetime.now()
             print('[',str(now),']', 'CNN training started for source', source)
@@ -291,6 +290,7 @@ def train_models():
             
             plot_history(history)
             backend.clear_session()
+            '''
             #CNN with word embedding
             '''
             tokenizer = Tokenizer(num_words=5000)
@@ -316,7 +316,6 @@ def train_models():
             X_train = pad_sequences(X_train, padding='post', maxlen=maxlen)
             X_test = pad_sequences(X_test, padding='post', maxlen=maxlen)
             
-            '''
             now = datetime.datetime.now()
             print('[',str(now),']', 'CNN training with word embedding started for source', source)
             print("\nUsing Deep Neural Networks with word embedding")
@@ -361,6 +360,7 @@ def train_models():
             
             #with GlobalMaxPooling1D layer to reduce number of features
             '''
+            '''
             embedding_dim = 50
 
             model = Sequential()
@@ -401,8 +401,10 @@ def train_models():
             print("Accuracy metrics saved to file")
             plot_history(history)
             backend.clear_session()
+            '''
     except FileNotFoundError as e:
         print("Error accessing file", e)
     except Exception as e:
         print(e)
-train_models()
+# df = setup_dataframe()
+# train_models(df)
