@@ -167,7 +167,7 @@ def glove_model():
     for word, i in tokenizer.word_index.items():
         word_list.append(word)
 
-    return accuracy
+   
 
 FILEPATH_DICT = {'kaggle': 'data/detecting_insults_kaggler/train.csv','dataworld': 'data/offensive_language_dataworld/data/labeled_data_squashed.csv'}
 
@@ -364,6 +364,8 @@ def train_models(df):
 
             X_train = tokenizer.texts_to_sequences(sentences_train)
             X_test = tokenizer.texts_to_sequences(sentences_test)
+           
+            
             vocab_size = len(tokenizer.word_index) + 1  # Adding 1 because of reserved 0 index
             print("Word embedding example weightage")
             print(sentences_train[4])
@@ -381,6 +383,40 @@ def train_models(df):
 
             X_train = pad_sequences(X_train, padding='post', maxlen=maxlen)
             X_test = pad_sequences(X_test, padding='post', maxlen=maxlen)
+            
+            embeddings_index = dict()
+            f = open('glove.6B.100d.txt', encoding="utf8")
+            for line in f:
+                values = line.split()
+                word = values[0]
+                coefs = np.asarray(values[1:], dtype='float32')
+                embeddings_index[word] = coefs
+            f.close()
+            embedding_matrix = np.zeros((vocabulary_size, 100))
+            for word, index in tokenizer.word_index.items():
+                if index > vocabulary_size - 1:
+                    break
+                else:
+                    embedding_vector = embeddings_index.get(word)
+                    if embedding_vector is not None:
+                        embedding_matrix[index] = embedding_vector
+                        
+             model_glove = Sequential()
+             model_glove.add(Embedding(vocab_size, 100, input_length=50, weights=[embedding_matrix], trainable=False))
+             model_glove.add(Dropout(0.2))
+             model_glove.add(Conv1D(64, 5, activation='relu'))
+             model_glove.add(MaxPooling1D(pool_size=4))
+             model_glove.add(LSTM(100))
+             model_glove.add(Dense(1, activation='sigmoid'))
+             model_glove.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+             #pls change the next line's 'labels' to the the value of the labels
+             model_glove.fit(data, np.array(labels), validation_split=0.4, epochs = 3)
+
+             ## Get weights
+             glove_embds = model_glove.layers[0].get_weights()[0]
+               
+     
+            
             
             now = datetime.datetime.now()
             print('[',str(now),']', 'CNN training with word embedding started for source', source)
