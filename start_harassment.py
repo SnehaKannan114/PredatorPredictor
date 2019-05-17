@@ -158,7 +158,7 @@ def glove_model():
     model_glove.add(Dense(1, activation='sigmoid'))
     model_glove.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     ## Fit train data
-    model_glove.fit(data, np.array('label'), validation_split=0.4, epochs = 3)
+    model_glove.fit(data, np.array(df['labels'].value), validation_split=0.4, epochs = 3)
 
     ## Get weights
     glove_embds = model_glove.layers[0].get_weights()[0]
